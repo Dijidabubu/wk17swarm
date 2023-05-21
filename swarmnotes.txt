@@ -1,0 +1,12 @@
+mkdir *
+cd newdir
+docker swarm init
+docker stack deploy -c docker-compose.yml <name>-app
+docker service ls
+docker network inspect bridge -f '{{range .IPAM.Config}}{{.Gateway}}{{end}}'
+docker service logs <name>-app_frontend
+docker service update <name>-app_frontend
+docker node ps
+docker node ls
+docker stack rm <name>-app
+docker swarm leave --force
