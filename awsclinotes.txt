@@ -1,0 +1,92 @@
+#AWS CLI to create EC2 you need....
+
+#VPC ID:
+#Subnet ID:
+#AMI ID:
+#Security Group ID:
+#Key name: 
+
+#Amazon Linux 2023 AMI
+ami-08333bccc35d71140
+
+#Amazon Linux 2 AMI
+ami-083eed19fc801d7a4
+
+#VPC (us-east-2 cloud9 docker)
+vpc-07576b099622dde82
+
+#SUBNET(us-east-2 cloud9 docker)
+subnet-09d06a4d518bde374
+subnet-098408ec69374afc5
+subnet-0e9d2ce82e388d41b
+
+#Security group ID (default docker cloud9 sg)
+sg-0daa327929a2319e5
+
+#create EC2 instant. 
+aws ec2 run-instances \
+    --image-id <AMI ID> \
+    --count <# of instances> \
+    --instance-type t2.micro \
+    --key-name <key name> \
+    --security-group-ids <SG ID> \
+    --subnet-id <subnet id> \
+    --block-device-mappings "[{\"DeviceName\":\"/dev/sdf\",\"Ebs\":{\"VolumeSize\":30,\"DeleteOnTermination\":false}}]" \ #set custom volume size for root volume /dev/sdf. can also add additional volumes using this parameter.
+    --tag-specifications 'ResourceType=instance,Tags=[{Key=Name,Value=<key name>}]' 'ResourceType=volume,Tags=[{Key=Name,Value=<name>-disk}]' \
+    --user-data file://path/to/script.sh
+    
+#create security group
+aws ec2 create-security-group \
+    --group-name <name> \
+    --description "description" \
+    --tag-specifications 'ResourceType=security-group,Tags=[{Key=Name,Value=<name>}]' \
+    --vpc-id "insert ID" #note down the SG ID in the output
+
+#adding inbound ingress firewall rules to SG
+aws ec2 authorize-security-group-ingress \
+    --group-id "<SG ID>" \
+    --protocol tcp \
+    --port 22 \
+    --cidr "0.0.0.0/0"
+    
+#if adding multiple ports and CIDRs use this
+aws ec2 authorize-security-group-ingress \
+    --group-id "<SG ID>" \
+    --tag-specifications 'ResourceType=security-group-rule,Tags=[{Key=Name,Value=<name>}]' \
+    --ip-permissions "IpProtocol=tcp,FromPort=22,ToPort=22,IpRanges=[{CidrIp=0.0.0.0/0},{CidrIp=10.0.0.0/24}]" \
+    --ip-permissions "IpProtocol=tcp,FromPort=80,ToPort=80,IpRanges=[{CidrIp=0.0.0.0/0},{CidrIp=10.0.0.0/24}]"
+
+#create an SSH key pair and output gets stored in ~/.ssh
+aws ec2 create-key-pair \       
+   --key-name  <key name> \
+   --query 'KeyMaterial' --output text > ~/.ssh/<key name>
+
+#Parameters
+--block-device-mappings #To set the custom volume size for the root volume /dev/sdf. You can also add additional volumes using this parameter.
+--monitoring #to enable detailed ec2 monitoring
+--ebs-optimized #to optimize ec2 for EBS IO
+--iam-instance-profile #to add instance profile (IAM role) to the instance
+--launch-template # to launch the ec2 instance from launch template
+--user-data file://path/to/script.sh #to pass the user data script
+--user-data <sudo systemctl nginx start> #if in a single command line you can pass it directly w/o an external file
+
+#Example shell script
+#!/bin/bash
+apt-get update -y
+sudo systemctl nginx start
+chkconfig nginx on
+
+#managing access keys via AWS CLI
+aws iam create-access-key
+aws iam update-access-key #to deactivate or activate a key
+aws iam list-access-keys #to list a user's access keys
+aws iam get-access-key-last-used #to determine when an access key was most recently used
+aws iam delete-access-key #to delete key
+
+#manging keys from AWS API
+CreateAccessKey
+UpdateAccessLey
+ListAccessKeys
+GetAccessKeyLastUsed
+DeleteAccessKey
+
